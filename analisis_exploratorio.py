@@ -170,14 +170,14 @@ def resumen(nombre, datos):
           f"promedio={statistics.mean(datos):.2f}, mediana={statistics.median(datos):.1f}")
 
 
-print("\n=== 1 y 2: Campos por archivo (detalle en campos_nulos_por_archivo.csv) ===")
+print("\n 1 y 2: Campos por archivo (detalle en campos_nulos_por_archivo.csv)")
 resumen("Campos por archivo", lista_campos)
 resumen("Campos sin información por archivo", lista_nulos)
 
 # ----------------------------------------------------------------------
 # Dispersión del esquema + nulos por campo (para decidir qué campos conservar)
 # ----------------------------------------------------------------------
-print("\n=== Dispersión del esquema ===")
+print("\nDispersión del esquema")
 print(f"Campos distintos en todo el lote: {len(presencia)}")
 print(f"Presentes en todos los archivos: {sum(1 for c in presencia.values() if c == n)}")
 print(f"Presentes en menos de la mitad: {sum(1 for c in presencia.values() if c < n / 2)}")
@@ -209,7 +209,7 @@ with open(salida("varianzas_todos.csv"), "w", newline="", encoding="utf-8") as f
         w.writerow([k, len(valores_numericos[k]), v])
 
 constantes = sum(1 for v in varianzas.values() if v == 0)
-print("\n=== 3: Varianza de campos numéricos (tabla completa en varianzas_todos.csv) ===")
+print("\n3: Varianza de campos numéricos (tabla completa en varianzas_todos.csv)")
 print(f"Campos numéricos: {len(varianzas)} | constantes (varianza = 0): {constantes}")
 for key in CLAVES_NUM:
     if key in varianzas:
@@ -238,7 +238,7 @@ with open(salida("texto_distintos_outliers.csv"), "w", newline="", encoding="utf
         w.writerow([key, d, o, t, f"{pct(o, d):.1f}", u])
 
 n_unicos = sum(1 for x in filas if x[4])
-print("\n=== 4 y 5: Campos de texto (tabla completa en texto_distintos_outliers.csv) ===")
+print("\n 4 y 5: Campos de texto (tabla completa en texto_distintos_outliers.csv)")
 print(f"Campos de texto analizados: {len(filas)} | con valor único por archivo: {n_unicos} "
       "(en estos los 'outliers' no son significativos: son identificadores/timestamps)")
 print(f"{'campo':<12}{'distintos':>10}{'outliers':>10}")
@@ -250,10 +250,45 @@ for key in CLAVES_TXT:
     else:
         print(f"{key:<12}{'no disponible como campo de texto':>20}")
 
+
+# ----------------------------------------------------------------------
+# Cruces adicionales: TELESCOP y archivos con RA/DEC según OBJECT
+# ----------------------------------------------------------------------
+print("\nValores de TELESCOP")
+for val, c in sorted(frecuencia_texto.get("TELESCOP", {}).items(), key=lambda x: -x[1]):
+    print(f"- {val}: {c}")
+
+radec_por_object = defaultdict(lambda: [0, 0])  # object -> [con RA y DEC, total]
+for archivo in archivos:
+    try:
+        h = fits.getheader(archivo)
+    except Exception:
+        continue
+    obj = str(h.get("OBJECT", "SIN_OBJECT")).strip()
+    tiene_radec = all(
+        k in h and isinstance(h[k], (int, float)) and not isinstance(h[k], bool) and not es_nulo(h[k])
+        for k in ("RA", "DEC")
+    )
+    radec_por_object[obj][1] += 1
+    if tiene_radec:
+        radec_por_object[obj][0] += 1
+
+total_radec = sum(v[0] for v in radec_por_object.values())
+total_obj = sum(v[1] for v in radec_por_object.values())
+print(f"\n Archivos con RA y DEC válidos: {total_radec} de {total_obj}")
+print(f"{'OBJECT':<28}{'con RA/DEC':>12}{'total':>8}")
+with open(salida("radec_por_object.csv"), "w", newline="", encoding="utf-8") as f:
+    w = csv.writer(f)
+    w.writerow(["object", "con_radec", "total", "pct_con_radec"])
+    for obj, (con, tot) in sorted(radec_por_object.items(), key=lambda x: -x[1][1]):
+        print(f"{obj:<28}{con:>12}{tot:>8}")
+        w.writerow([obj, con, tot, f"{pct(con, tot):.1f}"])
+
 # ----------------------------------------------------------------------
 # Evidencia para las reglas de negocio (2.3)
 # ----------------------------------------------------------------------
-print("\n=== Archivos por tipo (ESO DPR CATG) ===")
+
+print("\nArchivos por tipo (ESO DPR CATG)")
 for cat, c in sorted(por_categoria.items(), key=lambda x: -x[1]):
     print(f"- {cat}: {c} ({pct(c, n):.1f}%)")
 
@@ -263,7 +298,7 @@ if "OBJECT" in frecuencia_texto:
         w = csv.writer(f)
         w.writerow(["object", "archivos"])
         w.writerows(objs)
-    print(f"\n=== Archivos por OBJECT (top 15 de {len(objs)}; completo en archivos_por_object.csv) ===")
+    print(f"\nArchivos por OBJECT (top 15 de {len(objs)}; completo en archivos_por_object.csv)")
     for val, c in objs[:15]:
         print(f"- {val}: {c}")
 
@@ -272,7 +307,7 @@ if fechas:
     por_dia = defaultdict(int)
     for fecha, c in fechas.items():
         por_dia[fecha[:10]] += c
-    print(f"\n=== DATE-OBS: del {min(fechas)} al {max(fechas)} ===")
+    print(f"\nDATE-OBS: del {min(fechas)} al {max(fechas)}")
     print("Archivos por día:")
     for dia in sorted(por_dia):
         print(f"- {dia}: {por_dia[dia]}")
