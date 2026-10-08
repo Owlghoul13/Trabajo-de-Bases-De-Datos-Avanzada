@@ -2,8 +2,6 @@ import json
 import psycopg2
 
 # 1. Configurar la conexión a PostgreSQL
-# IMPORTANTE: Cambia 'tu_contraseña' por la contraseña real de tu base de datos local
-# Si tu usuario no es 'postgres', cámbialo también.
 try:
     conexion = psycopg2.connect(
         host="localhost",
@@ -22,7 +20,6 @@ try:
     print(f"Preparando para insertar {len(datos)} registros...")
 
     # 3. Consulta SQL para insertar datos
-    # Usamos ON CONFLICT DO NOTHING para evitar errores si ejecutas el script dos veces
     query_insertar = """
         INSERT INTO observaciones 
         (archivo_id, telescopio, instrumento, objeto_celeste, fecha_observacion, tiempo_exposicion, ra, dec, header_raw)
@@ -60,9 +57,9 @@ try:
         if registros_insertados % 300 == 0:
             print(f"Insertados {registros_insertados} de {len(datos)}...")
 
-    # 5. Confirmar los cambios (Commit)
+    # 5. Confirmar los cambios (un Commit)
     conexion.commit()
-    print("\n¡Carga finalizada con éxito!")
+    print("\n!!Carga finalizada con éxito!!")
 
 except Exception as e:
     print(f"Ocurrió un error: {e}")
