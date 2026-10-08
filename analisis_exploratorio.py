@@ -28,9 +28,8 @@ from collections import defaultdict
 from astropy.io import fits
 from astropy.io.fits.card import Undefined
 
-# ----------------------------------------------------------------------
+
 # Configuración
-# ----------------------------------------------------------------------
 RUTA_DATOS = "./raw_data/**/*.fits"   # recursivo: entra a subcarpetas de cada zip
 CARPETA_SALIDA = "./resultados_eda"
 
@@ -52,9 +51,7 @@ def salida(nombre):
     return os.path.join(CARPETA_SALIDA, nombre)
 
 
-# ----------------------------------------------------------------------
 # Funciones auxiliares
-# ----------------------------------------------------------------------
 def es_nulo(valor):
     """True si el valor del header no aporta información."""
     if valor is None or isinstance(valor, Undefined):  # `KEY =` en blanco en FITS
@@ -76,9 +73,9 @@ def pct(parte, total):
     return 100 * parte / total if total else 0.0
 
 
-# ----------------------------------------------------------------------
+
 # 1) Búsqueda de archivos (se excluyen basura de macOS: __MACOSX y ._*)
-# ----------------------------------------------------------------------
+
 todos = glob.glob(RUTA_DATOS, recursive=True)
 archivos = sorted(
     a for a in todos
@@ -89,9 +86,9 @@ print(f"Archivos .fits encontrados: {len(todos)} | válidos tras filtrar basura 
 if not archivos:
     raise SystemExit("No se encontraron archivos. Revisa RUTA_DATOS.")
 
-# ----------------------------------------------------------------------
+
 # 2) Lectura de headers
-# ----------------------------------------------------------------------
+
 por_archivo = []                              # (archivo, campos, nulos, categoria)
 valores_numericos = defaultdict(list)         # campo -> [valores numéricos]
 frecuencia_texto = defaultdict(lambda: defaultdict(int))  # campo -> {valor: conteo}
@@ -152,9 +149,9 @@ if errores:
 if n == 0:
     raise SystemExit("Ningún archivo se pudo leer.")
 
-# ----------------------------------------------------------------------
+
 # ESTADÍSTICAS 1 y 2: campos y campos sin información POR ARCHIVO
-# ----------------------------------------------------------------------
+
 with open(salida("campos_nulos_por_archivo.csv"), "w", newline="", encoding="utf-8") as f:
     w = csv.writer(f)
     w.writerow(["archivo", "campos", "campos_sin_info", "pct_sin_info", "dpr_catg"])
@@ -174,9 +171,8 @@ print("\n 1 y 2: Campos por archivo (detalle en campos_nulos_por_archivo.csv)")
 resumen("Campos por archivo", lista_campos)
 resumen("Campos sin información por archivo", lista_nulos)
 
-# ----------------------------------------------------------------------
-# Dispersión del esquema + nulos por campo (para decidir qué campos conservar)
-# ----------------------------------------------------------------------
+# Dispersión del esquema + nulos por campo (para decidir qué campos vamos a conservar)
+
 print("\nDispersión del esquema")
 print(f"Campos distintos en todo el lote: {len(presencia)}")
 print(f"Presentes en todos los archivos: {sum(1 for c in presencia.values() if c == n)}")
@@ -197,9 +193,9 @@ mixtos = [k for k, t in tipos_campo.items() if len(t) > 1]
 if mixtos:
     print(f"Campos con tipos mezclados (p. ej. número y texto): {len(mixtos)} -> {mixtos[:5]}")
 
-# ----------------------------------------------------------------------
+
 # ESTADÍSTICA 3: varianza de TODOS los campos numéricos (varianza muestral, n-1)
-# ----------------------------------------------------------------------
+
 varianzas = {k: statistics.variance(v) for k, v in valores_numericos.items() if len(v) > 1}
 
 with open(salida("varianzas_todos.csv"), "w", newline="", encoding="utf-8") as f:
@@ -217,9 +213,9 @@ for key in CLAVES_NUM:
     else:
         print(f"- {key}: no disponible como campo numérico")
 
-# ----------------------------------------------------------------------
+
 # ESTADÍSTICAS 4 y 5: distintos y outliers de TODOS los campos de texto
-# ----------------------------------------------------------------------
+
 filas = []
 for key, dicc in frecuencia_texto.items():
     distintos = len(dicc)
@@ -251,9 +247,9 @@ for key in CLAVES_TXT:
         print(f"{key:<12}{'no disponible como campo de texto':>20}")
 
 
-# ----------------------------------------------------------------------
+
 # Cruces adicionales: TELESCOP y archivos con RA/DEC según OBJECT
-# ----------------------------------------------------------------------
+
 print("\nValores de TELESCOP")
 for val, c in sorted(frecuencia_texto.get("TELESCOP", {}).items(), key=lambda x: -x[1]):
     print(f"- {val}: {c}")
@@ -284,9 +280,7 @@ with open(salida("radec_por_object.csv"), "w", newline="", encoding="utf-8") as 
         print(f"{obj:<28}{con:>12}{tot:>8}")
         w.writerow([obj, con, tot, f"{pct(con, tot):.1f}"])
 
-# ----------------------------------------------------------------------
 # Evidencia para las reglas de negocio (2.3)
-# ----------------------------------------------------------------------
 
 print("\nArchivos por tipo (ESO DPR CATG)")
 for cat, c in sorted(por_categoria.items(), key=lambda x: -x[1]):
